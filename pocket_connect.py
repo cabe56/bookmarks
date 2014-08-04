@@ -1,9 +1,8 @@
 import os
-from pocket import Pocket
+from vendor.pocket import Pocket
 import analyzer
 
-POCKET_CONSUMER_KEY = os.environ['POCKET_CONSUMER_KEY']
-POCKET_ACCESS_TOKEN = os.environ.get('POCKET_ACCESS_TOKEN')
+CONSUMER_KEY = '30573-f8d6198585aa28b9389b5956' # Pocket Stats app
 
 pocket_response = None # Store response contents
 
@@ -17,16 +16,13 @@ def get_pocket_items(access_token=None):
     # for further filtering by API params
     return pocket_response[0]['list'].values() # No pagination, all items in list
 
-def get_pocket_access_token(consumer_key):
-    """Return access token needed to instantiate Pocket.
+def get_request_token():
+    """Return request token needed to obtain access token for Pocket."""
+    return Pocket.get_request_token(consumer_key=CONSUMER_KEY)
 
-    You have to visit https://getpocket.com/auth/authorize
-    to gain programatic access to the contents of your pocket account.
-
-    Save token returned for future use.
-    """
-    request_token = Pocket.get_request_token(consumer_key=consumer_key)
-    print 'Need to manually authorize code to make requests'
-    r = input('Input "y" and press enter after inputing this url into your browser: https://getpocket.com/auth/authorize?request_token=%s&redirect_uri=google.com' % request_token)
-    # Visit to url authorizes request token to make other requests to user account
-    return Pocket.get_access_token(consumer_key, request_token)
+def get_credentials(request_token):
+    """Return token needed to make authenticated requests and username of the user."""
+    return  Pocket.get_credentials(CONSUMER_KEY, request_token)
+def get_access_token(request_token):
+    """Return token needed to make authenticated requests."""
+    return Pocket.get_access_token(CONSUMER_KEY, request_token)
