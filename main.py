@@ -17,7 +17,13 @@
 import webapp2
 import pocket_connect
 import analyzer
+import jinja2
+import os
+import time
 from google.appengine.ext import db
+
+template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape = True)
 
 class User(db.Model):
     username = db.StringProperty(required=True)
@@ -53,13 +59,24 @@ class Bookmark(db.Model):
     tags = db.TextProperty()
     word_count = db.IntegerProperty()
 
-class MainHandler(webapp2.RequestHandler):
+class HelpHandler(webapp2.RequestHandler):
+    def write (self, *a,**kw):
+        self.response.write(*a,**kw)
+
+    def render_str(self,template, **params):
+        t = jinja_env.get_template(template)
+        return t.render(params)
+
+    def render(self, template, **kw):
+        self.write(self.render_str(template, **kw))
+
+class MainHandler(HelpHandler):
     def get(self):
         request_token = pocket_connect.get_request_token()
         redirect_uri = 'http://localhost:14080/access?request_token=%s' % request_token
         self.redirect(str('https://getpocket.com/auth/authorize?request_token=%s&redirect_uri=%s' % (request_token,redirect_uri)))
 
-class AccessHandler(webapp2.RequestHandler):
+class AccessHandler(HelpHandler):
     def get(self):
         request_token = self.request.get('request_token')
         credentials = pocket_connect.get_credentials(request_token)
@@ -68,9 +85,19 @@ class AccessHandler(webapp2.RequestHandler):
         user.save_bookmarks()
         self.redirect('/users?user_key='+str(user.key()))
 
-class UsersHandler(webapp2.RequestHandler):
+class UsersHandler(HelpHandler):
     def get(self):
-        self.response.write(User.get(self.request.get('user_key')).bookmarks.fetch(1000))
+        """bookmarks are not shown when user is created. 
+
+        A 1 second sleep permits the put() from the AccessHandler 
+        to act before the query is done.
+        """
+        time.sleep(1)
+        user_key = self.request.get('user_key')
+        user = User.get(user_key)
+        #fetch(None) returns all the entities of the query.
+        user_bookmarks = user.bookmarks.fetch(None)
+        self.render('bookmarks.html',bookmarks= user_bookmarks)
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
