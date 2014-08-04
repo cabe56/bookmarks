@@ -60,8 +60,8 @@ class Bookmark(db.Model):
     word_count = db.IntegerProperty()
 
 class HelpHandler(webapp2.RequestHandler):
-    def write (self, *a,**kw):
-        self.response.write(*a,**kw)
+    def write (self, *a, **kw):
+        self.response.write(*a, **kw)
 
     def render_str(self,template, **params):
         t = jinja_env.get_template(template)
@@ -100,7 +100,7 @@ class BookmarkHandler(HelpHandler):
         user = User.get(user_key)
         #fetch(None) returns all the entities of the query.
         user_bookmarks = user.bookmarks.fetch(None)
-        self.render('bookmarks.html',bookmarks= user_bookmarks)
+        self.render('bookmarks.html', bookmarks=user_bookmarks)
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
