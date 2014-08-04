@@ -83,17 +83,20 @@ class AccessHandler(HelpHandler):
         user = User(username=credentials['username'], pocket_access_token=credentials['access_token'])
         user.put()
         user.save_bookmarks()
-        self.redirect('/users?user_key='+str(user.key()))
+        self.response.headers.add_header('Set-Cookie', 'user_key='+str(user.key())+'; Path=/')
+        self.redirect('/users')
 
 class UsersHandler(HelpHandler):
     def get(self):
-        """bookmarks are not shown when user is created. 
+        user_key = self.request.cookies.get('user_key')
+        user = User.get(user_key)
+        self.render('user.html',user= user)
 
-        A 1 second sleep permits the put() from the AccessHandler 
-        to act before the query is done.
-        """
-        time.sleep(1)
-        user_key = self.request.get('user_key')
+class BookmarkHandler(HelpHandler):
+    def get(self):
+        user_key = self.request.cookies.get('user_key')
+        if not user_key:
+            self.redirect('/')
         user = User.get(user_key)
         #fetch(None) returns all the entities of the query.
         user_bookmarks = user.bookmarks.fetch(None)
@@ -102,5 +105,6 @@ class UsersHandler(HelpHandler):
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/access', AccessHandler),
-    ('/users', UsersHandler)
+    ('/users', UsersHandler),
+    ('/bookmarks', BookmarkHandler)
 ], debug=True)
