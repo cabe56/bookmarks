@@ -9,6 +9,13 @@ def get_pocket_items(access_token, **params):
     pocket_response = pocket.get(**params)
     # Check out http://getpocket.com/developer/docs/v3/retrieve
     # for further filtering by API params
+
+    """ When offset > amount of pocket items of user, 
+    the pocket_response is a list instead of a dictionary, 
+    so the function returns an error message.
+    """
+    if type(pocket_response[0]['list']) == list:
+        return 'error'
     return pocket_response[0]['list'].values() # No pagination, all items in list
 
 def get_request_token():

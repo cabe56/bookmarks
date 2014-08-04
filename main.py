@@ -29,10 +29,18 @@ class User(db.Model):
     username = db.StringProperty(required=True)
     pocket_access_token = db.StringProperty(required=True)
 
-    def save_bookmarks(self):
-        """Fetch items and store in db."""
+    def save_bookmarks(self, offset=0):
+        """Fetch items and store in db. 
+
+        In order to do the pagination a recursion on the offset will 
+        insert 1 items at a time on the database. 
+        """
         new_bookmarks = []
-        pocket_r = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=10)
+        count = 1
+        pocket_r = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=count, offset=offset)
+        # Stop recursion if the items extracted is less than count.
+        if len(pocket_r) < count or pocket_r == 'error':
+            return
         for b in pocket_r:
             attrs = {
                     'user': self,
@@ -47,7 +55,9 @@ class User(db.Model):
             new_b = Bookmark(**attrs)
             new_b.put()
             new_bookmarks.append(new_b)
-        return new_bookmarks
+            #Function needed that shows the progress of the recursion to the user
+            #show_progress_to_user()
+        return self.save_bookmarks(offset+1)
 
 class Bookmark(db.Model):
     user = db.ReferenceProperty(User, collection_name='bookmarks')
