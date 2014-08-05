@@ -28,19 +28,23 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), a
 class User(db.Model):
     username = db.StringProperty(required=True)
     pocket_access_token = db.StringProperty(required=True)
+    total_pocket_items = db.IntegerProperty()
+    last_access_pocket = db.IntegerProperty()
 
     def save_bookmarks(self, offset=0):
         """Fetch items and store in db. 
 
         In order to do the pagination a recursion on the offset will 
-        insert 1 items at a time on the database. 
+        insert "count" items at a time on the database. 
         """
         new_bookmarks = []
         count = 1
-        pocket_r = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=count, offset=offset)
+        pocket_r = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=count, offset=offset, since=self.last_access_pocket)
         # Stop recursion if the items extracted is less than count.
-        if len(pocket_r) < count or pocket_r == 'error':
-            return
+        if len(pocket_r) < count or pocket_r == []:
+            #return total number of items extracted and update last_access_pocket
+            self.last_access_pocket = int(time.time())
+            return offset + len(pocket_r)
         for b in pocket_r:
             attrs = {
                     'user': self,
@@ -57,7 +61,7 @@ class User(db.Model):
             new_bookmarks.append(new_b)
             #Function needed that shows the progress of the recursion to the user
             #show_progress_to_user()
-        return self.save_bookmarks(offset+1)
+        return self.save_bookmarks(offset+count)
 
 class Bookmark(db.Model):
     user = db.ReferenceProperty(User, collection_name='bookmarks')
@@ -88,11 +92,21 @@ class MainHandler(HelpHandler):
 
 class AccessHandler(HelpHandler):
     def get(self):
-        request_token = self.request.get('request_token')
-        credentials = pocket_connect.get_credentials(request_token)
-        user = User(username=credentials['username'], pocket_access_token=credentials['access_token'])
+        #If user is already in db, no need to get autorization from Pocket.
+        user_key = self.request.cookies.get('user_key')
+        user = User.get(user_key)
+        if not user:
+            request_token = self.request.get('request_token')
+            credentials = pocket_connect.get_credentials(request_token)
+            user = User(username=credentials['username'], pocket_access_token=credentials['access_token'], last_access_pocket=0)
+            user.put()
+        total_items_extracted = user.save_bookmarks()
+        #If user had already extracted items from pocket, we add the amount of new ones.
+        if user.total_pocket_items != None:     
+            user.total_pocket_items += total_items_extracted
+        else:
+            user.total_pocket_items = total_items_extracted
         user.put()
-        user.save_bookmarks()
         self.response.headers.add_header('Set-Cookie', 'user_key='+str(user.key())+'; Path=/')
         self.redirect('/users')
 
@@ -110,6 +124,7 @@ class BookmarkHandler(HelpHandler):
         user = User.get(user_key)
         #fetch(None) returns all the entities of the query.
         user_bookmarks = user.bookmarks.fetch(None)
+        self.response.write("Total number of bookmarks:"+str(user.total_pocket_items))
         self.render('bookmarks.html', bookmarks=user_bookmarks)
 
 app = webapp2.WSGIApplication([

@@ -15,7 +15,7 @@ def get_pocket_items(access_token, **params):
     so the function returns an error message.
     """
     if type(pocket_response[0]['list']) == list:
-        return 'error'
+        return []
     return pocket_response[0]['list'].values() # No pagination, all items in list
 
 def get_request_token():
