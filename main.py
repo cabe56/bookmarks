@@ -29,23 +29,21 @@ class User(db.Model):
     username = db.StringProperty(required=True)
     pocket_access_token = db.StringProperty(required=True)
     total_pocket_items = db.IntegerProperty()
-    last_access_pocket = db.IntegerProperty()
+    last_access_to_pocket = db.IntegerProperty()
 
-    def save_bookmarks(self, offset=0):
+    def save_bookmarks(self, offset=0, count=1):
         """Fetch items and store in db. 
 
         In order to do the pagination a recursion on the offset will 
         insert "count" items at a time on the database. 
         """
-        new_bookmarks = []
-        count = 1
-        pocket_r = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=count, offset=offset, since=self.last_access_pocket)
+        response_items = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=count, offset=offset, since=self.last_access_to_pocket)
         # Stop recursion if the items extracted is less than count.
-        if len(pocket_r) < count or pocket_r == []:
-            #return total number of items extracted and update last_access_pocket
-            self.last_access_pocket = int(time.time())
-            return offset + len(pocket_r)
-        for b in pocket_r:
+        if len(response_items) < count or response_items == []:
+            #return total number of items extracted and update last_access_to_pocket
+            self.last_access_to_pocket = int(time.time())
+            return offset + len(response_items)
+        for b in response_items:
             attrs = {
                     'user': self,
                     'title': b['resolved_title'],
@@ -58,13 +56,12 @@ class User(db.Model):
             }
             new_b = Bookmark(**attrs)
             new_b.put()
-            new_bookmarks.append(new_b)
             #Function needed that shows the progress of the recursion to the user
             #show_progress_to_user()
         return self.save_bookmarks(offset+count)
 
 class Bookmark(db.Model):
-    user = db.ReferenceProperty(User, collection_name='bookmarks')
+    user = db.ReferenceProperty(User)
     url = db.StringProperty(required=True)
     title = db.StringProperty()
     has_been_read = db.BooleanProperty()
@@ -98,7 +95,7 @@ class AccessHandler(HelpHandler):
         if not user:
             request_token = self.request.get('request_token')
             credentials = pocket_connect.get_credentials(request_token)
-            user = User(username=credentials['username'], pocket_access_token=credentials['access_token'], last_access_pocket=0)
+            user = User(username=credentials['username'], pocket_access_token=credentials['access_token'], last_access_to_pocket=0)
             user.put()
         total_items_extracted = user.save_bookmarks()
         #If user had already extracted items from pocket, we add the amount of new ones.
@@ -123,11 +120,11 @@ class BookmarkHandler(HelpHandler):
             self.redirect('/')
         user = User.get(user_key)
         #fetch(None) returns all the entities of the query.
-        user_bookmarks = user.bookmarks.fetch(None)
+        user_bookmarks = user.bookmark_set.fetch(None)
         self.response.write("Total number of bookmarks:"+str(user.total_pocket_items))
         self.render('bookmarks.html', bookmarks=user_bookmarks)
 
-app = webapp2.WSGIApplication([
+app = webapp2.WSGIApplication([- [ ] Set user email as unique
     ('/', MainHandler),
     ('/access', AccessHandler),
     ('/users', UsersHandler),
