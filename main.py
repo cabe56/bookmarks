@@ -109,24 +109,36 @@ class AccessHandler(HelpHandler):
 
 class UsersHandler(HelpHandler):
     def get(self):
-        user_key = self.request.cookies.get('user_key')
-        user = User.get(user_key)
-        self.render('user.html',user= user)
+        users = User.all().fetch(None)
+        self.render('users.html',users= users)
+
+class UserPageHandler(HelpHandler):
+    def get(self, user_key):
+        #Check if user_key points to a user in the db; if not, redirect him to home page.
+        try:
+            user = User.get(user_key)
+        except:
+            self.redirect('/')
+            return
+        user_bookmarks = user.bookmark_set.fetch(None)
+        self.render('user.html', user=user, bookmarks=user_bookmarks)
 
 class BookmarkHandler(HelpHandler):
     def get(self):
-        user_key = self.request.cookies.get('user_key')
-        if not user_key:
-            self.redirect('/')
-        user = User.get(user_key)
-        #fetch(None) returns all the entities of the query.
-        user_bookmarks = user.bookmark_set.fetch(None)
-        self.response.write("Total number of bookmarks:"+str(user.total_pocket_items))
-        self.render('bookmarks.html', bookmarks=user_bookmarks)
+        bookmarks = Bookmark.all().fetch(None)
+        # user_key = self.request.cookies.get('user_key')
+        # if not user_key:
+        #     self.redirect('/')
+        # user = User.get(user_key)
+        # fetch(None) returns all the entities of the query.
+        # user_bookmarks = user.bookmark_set.fetch(None)
+        # self.response.write("Total number of bookmarks:"+str(user.total_pocket_items))
+        self.render('bookmarks.html', bookmarks=bookmarks)
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/access', AccessHandler),
     ('/users', UsersHandler),
+    ('/users/(.*)', UserPageHandler),
     ('/bookmarks', BookmarkHandler)
 ], debug=True)
