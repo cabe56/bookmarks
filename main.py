@@ -124,7 +124,7 @@ class BookmarkHandler(HelpHandler):
         self.response.write("Total number of bookmarks:"+str(user.total_pocket_items))
         self.render('bookmarks.html', bookmarks=user_bookmarks)
 
-app = webapp2.WSGIApplication([- [ ] Set user email as unique
+app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/access', AccessHandler),
     ('/users', UsersHandler),
