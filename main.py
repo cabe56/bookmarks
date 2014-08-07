@@ -31,8 +31,9 @@ class User(db.Model):
     total_pocket_items = db.IntegerProperty()
     last_access_to_pocket = db.IntegerProperty()
 
-    def save_bookmarks(self, offset=0, count=1):
-        """Fetch items and store in db. 
+
+    def fetch_bookmarks(self, offset=0, count=1):
+        """Fetch items and store in db. Return total number of inserted bookmarks.
 
         In order to do the pagination a recursion on the offset will 
         insert "count" items at a time on the database. 
@@ -43,22 +44,25 @@ class User(db.Model):
             #return total number of items extracted and update last_access_to_pocket
             self.last_access_to_pocket = int(time.time())
             return offset + len(response_items)
-        for b in response_items:
+        self.save_bookmarks(response_items)
+        #show_progress_to_user()    
+        return self.fetch_bookmarks(offset+count)
+    def save_bookmarks(self, bookmarks):
+        for bookmark in bookmarks:
             attrs = {
                     'user': self,
-                    'title': b['resolved_title'],
-                    'has_been_read': b['status'] == '1',
-                    'is_favorite': b['favorite'] == '1',
-                    'url': b['resolved_url'],
-                    #'tags': str(b['tags'].keys()),
-                    'excerpt': b['excerpt'],
-                    'word_count': int(b['word_count'])
+                    'title': bookmark['resolved_title'],
+                    'has_been_read': bookmark['status'] == '1',
+                    'is_favorite': bookmark['favorite'] == '1',
+                    'url': bookmark['resolved_url'],
+                    #'tags': str(bookmark['tags'].keys()),
+                    'excerpt': bookmark['excerpt'],
+                    'word_count': int(bookmark['word_count'])
             }
             new_b = Bookmark(**attrs)
             new_b.put()
-            #Function needed that shows the progress of the recursion to the user
-            #show_progress_to_user()
-        return self.save_bookmarks(offset+count)
+        return
+            
 
 class Bookmark(db.Model):
     user = db.ReferenceProperty(User)
@@ -83,6 +87,8 @@ class HelpHandler(webapp2.RequestHandler):
 
 class MainHandler(HelpHandler):
     def get(self):
+        self.render('home.html')
+        return
         request_token = pocket_connect.get_request_token()
         redirect_uri = 'http://localhost:14080/access?request_token=%s' % request_token
         self.redirect(str('https://getpocket.com/auth/authorize?request_token=%s&redirect_uri=%s' % (request_token,redirect_uri)))
@@ -97,7 +103,7 @@ class AccessHandler(HelpHandler):
             credentials = pocket_connect.get_credentials(request_token)
             user = User(username=credentials['username'], pocket_access_token=credentials['access_token'], last_access_to_pocket=0)
             user.put()
-        total_items_extracted = user.save_bookmarks()
+        total_items_extracted = user.fetch_bookmarks()
         #If user had already extracted items from pocket, we add the amount of new ones.
         if user.total_pocket_items != None:     
             user.total_pocket_items += total_items_extracted
@@ -111,6 +117,9 @@ class UsersHandler(HelpHandler):
     def get(self):
         users = User.all().fetch(None)
         self.render('users.html',users= users)
+    def post(self):
+        email = self.request.get('email')
+        self.response.write(email)
 
 class UserPageHandler(HelpHandler):
     def get(self, user_key):
@@ -119,20 +128,12 @@ class UserPageHandler(HelpHandler):
             user = User.get(user_key)
         except:
             self.redirect('/')
-            return
         user_bookmarks = user.bookmark_set.fetch(None)
         self.render('user.html', user=user, bookmarks=user_bookmarks)
 
 class BookmarkHandler(HelpHandler):
     def get(self):
-        bookmarks = Bookmark.all().fetch(None)
-        # user_key = self.request.cookies.get('user_key')
-        # if not user_key:
-        #     self.redirect('/')
-        # user = User.get(user_key)
-        # fetch(None) returns all the entities of the query.
-        # user_bookmarks = user.bookmark_set.fetch(None)
-        # self.response.write("Total number of bookmarks:"+str(user.total_pocket_items))
+        bookmarks = db.GqlQuery(" SELECT * FROM Bookmark WHERE is_favorite=True ").fetch(None)
         self.render('bookmarks.html', bookmarks=bookmarks)
 
 app = webapp2.WSGIApplication([
