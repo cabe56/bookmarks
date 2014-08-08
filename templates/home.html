@@ -1,5 +1,11 @@
+<h4>Bookmarks!</h4>
 <form method = 'post' action='/users'>
-	Email: <input type = 'text' name='email'>
+	Email<input type = "text" name='email' value='{{email}}'>
+	<br>
+	Password<input type = "password" name='password'>
+	<br>
+	{{error}}
 	<br>
 	<input type = 'submit'>
-</form
+
+</form>
