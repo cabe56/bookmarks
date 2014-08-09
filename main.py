@@ -17,6 +17,7 @@
 import webapp2
 import pocket_connect
 import analyzer
+import users
 import jinja2
 import os
 import time
@@ -28,11 +29,16 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), a
 
 #Gets user with a specific key, if error, returns None.
 def get_by_key(key):
-        try:
-            return users.User.get(key)
-        except:
-            return None
+    try:
+        return users.User.get(key)
+    except:
+        return None
 
+def get_bookmark(key):
+    bookmark_key = db.Key.from_path('Bookmark', str(key))
+    bookmark =Bookmark.get(bookmark_key)
+    return bookmark
+    
 class Bookmark(db.Model):
     user = db.ReferenceProperty(users.User)
     url = db.StringProperty(required=True)
@@ -60,8 +66,8 @@ class MainHandler(HelpHandler):
         user = get_by_key(user_key)
         if user:
             self.redirect('/bookmarks') 
-            return     
-        self.render('login.html')        
+	else:
+            self.render('home.html')        
 
 class AccessHandler(HelpHandler):
     def get(self):
@@ -90,13 +96,13 @@ class AccessHandler(HelpHandler):
 class UsersHandler(HelpHandler):
     def get(self):
         users_names = users.User.all().fetch(None)
-        self.render('users.html', users= users_names)
+        self.render('users.html', users=users_names)
 
     def post(self):
         email = self.request.get('email')
         password = self.request.get('password')
         error = users.login_signup_logic(self,email,password)
-        self.render('login.html',email = email,error=error)
+        self.render('home.html', email=email, error=error)
 
 class UserPageHandler(HelpHandler):
     def get(self, user_key):
