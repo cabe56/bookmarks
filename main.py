@@ -85,9 +85,10 @@ class AccessHandler(HelpHandler):
         #Erase password cookie.
         self.response.headers.add_header('Set-Cookie', 'user_pass=; Path=/')
         self.response.headers.add_header('Set-Cookie', 'user_key='+str(user.key())+'; Path=/')
-        taskqueue.add(url='/access',params={'user_key':user.key()})
+        taskqueue.add(url='/access', params={'user_key':user.key()})
         self.redirect('/users')
 
+    #Posts send to '/access' are tasks for fetching user's bookmark
     def post(self):
         user_key = str(self.request.get('user_key'))
         user = get_by_key(user_key)
