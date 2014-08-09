@@ -86,7 +86,7 @@ class AccessHandler(HelpHandler):
         self.response.headers.add_header('Set-Cookie', 'user_pass=; Path=/')
         self.response.headers.add_header('Set-Cookie', 'user_key='+str(user.key())+'; Path=/')
         taskqueue.add(url='/access', params={'user_key':user.key()})
-        self.redirect('/users')
+        self.redirect('/bookmarks')
 
     #Posts send to '/access' are tasks for fetching user's bookmark
     def post(self):
