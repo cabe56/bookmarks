@@ -3,9 +3,10 @@ import hashlib
 import random
 import string
 import time
-import pocket_connect
 import main
+import pocket_connect
 from google.appengine.ext import db
+
 #Regular Expressions used in validation functions.
 USER_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
 PASS_RE = re.compile(r"^.{3,20}$")
@@ -35,7 +36,7 @@ def valid_pw(name, pw, h):
     else:
         return False
 
-def login_signup_logic(self,email,password):
+def login_signup_logic(self, email, password):
     valid_e = valid_email(email)
     valid_pass = valid_password(password)
     error = ''
@@ -86,7 +87,9 @@ class User(db.Model):
         return self.fetch_bookmarks(offset+count)
     def save_bookmarks(self, bookmarks):
         for bookmark in bookmarks:
+            key_name = str(self.email)+str(bookmark['resolved_url'])
             attrs = {
+                    'key_name': key_name,
                     'user': self,
                     'title': bookmark['resolved_title'],
                     'has_been_read': bookmark['status'] == '1',
@@ -96,6 +99,12 @@ class User(db.Model):
                     'excerpt': bookmark['excerpt'],
                     'word_count': int(bookmark['word_count'])
             }
-            new_b = main.Bookmark(**attrs)
-            new_b.put()
-        return
+            new_bookmark = main.get_bookmark(key_name)
+            if new_bookmark == None:
+                new_bookmark = main.Bookmark(**attrs)
+            else:
+                new_bookmark.has_been_read = bookmark['status'] == '1'
+                new_bookmark.is_favorite = bookmark['favorite'] == '1'
+                #new_bookmark.tags = str(bookmark['tags'].keys())
+            new_bookmark.put()
+        return 
