@@ -23,6 +23,7 @@ import os
 import time
 import users
 from google.appengine.ext import db
+from google.appengine.api import taskqueue
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), autoescape = True)
@@ -66,7 +67,7 @@ class MainHandler(HelpHandler):
         user = get_by_key(user_key)
         if user:
             self.redirect('/bookmarks') 
-	else:
+        else:
             self.render('home.html')        
 
 class AccessHandler(HelpHandler):
@@ -83,6 +84,14 @@ class AccessHandler(HelpHandler):
             user.put()
         #Erase password cookie.
         self.response.headers.add_header('Set-Cookie', 'user_pass=; Path=/')
+        self.response.headers.add_header('Set-Cookie', 'user_key='+str(user.key())+'; Path=/')
+        taskqueue.add(url='/access', params={'user_key':user.key()})
+        self.redirect('/users')
+
+    #Posts send to '/access' are tasks for fetching user's bookmark
+    def post(self):
+        user_key = str(self.request.get('user_key'))
+        user = get_by_key(user_key)
         total_items_extracted = user.fetch_bookmarks()
         #If user had already extracted items from pocket, we add the amount of new ones.
         if user.total_pocket_items != None:     
@@ -90,8 +99,6 @@ class AccessHandler(HelpHandler):
         else:
             user.total_pocket_items = total_items_extracted
         user.put()
-        self.response.headers.add_header('Set-Cookie', 'user_key='+str(user.key())+'; Path=/')
-        self.redirect('/bookmarks')
 
 class UsersHandler(HelpHandler):
     def get(self):
