@@ -1,4 +1,5 @@
 import os
+import json
 from vendor.pocket import Pocket
 import analyzer
 
@@ -8,15 +9,16 @@ def get_pocket_items(access_token, **params):
     pocket = Pocket(CONSUMER_KEY, access_token)
     pocket_response = pocket.get(**params)
     # Check out http://getpocket.com/developer/docs/v3/retrieve
-    # for further filtering by API params
+    # for info on filtering results using  API params
+    items = []
+    if type(pocket_response[0]['list']) == dict:
+        # When offset > amount of pocket items of user,
+        # the pocket_response is a list instead of a dictionary.
+        items = pocket_response[0]['list'].values()
+    return items
 
-    """ When offset > amount of pocket items of user, 
-    the pocket_response is a list instead of a dictionary, 
-    so the function returns an error message.
-    """
-    if type(pocket_response[0]['list']) == list:
-        return []
-    return pocket_response[0]['list'].values() # No pagination, all items in list
+def get_pocket_items_from_json(filename='pocket_bookmarks.json.dump'):
+    return json.load(open(filename, 'r'))
 
 def get_request_token():
     """Return request token needed to obtain access token for Pocket."""
