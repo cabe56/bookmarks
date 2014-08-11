@@ -39,7 +39,12 @@ def get_bookmark(key):
     bookmark_key = db.Key.from_path('Bookmark', str(key))
     bookmark =Bookmark.get(bookmark_key)
     return bookmark
-    
+ 
+def sort_bookmarks(bookmarks):
+    #Sorts bookmarks by favorites first. If reverse=False (default), favorites would be last.
+    bookmarks_sorted = sorted(bookmarks, key=lambda bookmark: bookmark.is_favorite, reverse=True)
+    return bookmarks_sorted
+
 class Bookmark(db.Model):
     user = db.ReferenceProperty(users.User)
     url = db.StringProperty(required=True)
@@ -118,7 +123,7 @@ class UserPageHandler(HelpHandler):
         if not user:
             self.redirect('/')
             return
-        user_bookmarks = user.bookmark_set.fetch(None)
+        user_bookmarks = sort_bookmarks(user.bookmark_set.fetch(None))
         self.render('user.html', user=user, bookmarks=user_bookmarks)
 
 class BookmarkHandler(HelpHandler):
