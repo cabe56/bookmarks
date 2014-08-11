@@ -108,3 +108,8 @@ class User(db.Model):
                 #new_bookmark.tags = str(bookmark['tags'].keys())
             new_bookmark.put()
         return 
+
+    def sort_bookmarks(bookmarks):
+    #Sorts bookmarks by favorites first. If reverse=False (default), favorites would be last.
+    bookmarks_sorted = sorted(bookmarks, key=lambda bookmark: bookmark.is_favorite, reverse=True)
+    return bookmarks_sorted
