@@ -81,6 +81,9 @@ class Bookmark(db.Model):
         return map(lambda i: Bookmark.save_pocket_item(i, user), items)
 
 class HelpHandler(webapp2.RequestHandler):
+    def current_user(self):
+        return get_by_key(self.request.cookies.get('user_key'))
+
     def write (self, *a, **kw):
         self.response.write(*a, **kw)
 
@@ -93,9 +96,7 @@ class HelpHandler(webapp2.RequestHandler):
 
 class MainHandler(HelpHandler):
     def get(self):
-        user_key = self.request.cookies.get('user_key')
-        user = get_by_key(user_key)
-        if user:
+        if self.current_user():
             self.redirect('bookmarks')
         else:
             self.render('home.html')
@@ -103,8 +104,7 @@ class MainHandler(HelpHandler):
 class AccessHandler(HelpHandler):
     def get(self):
         #If user is already in db, no need to get autorization from Pocket.
-        user_key = self.request.cookies.get('user_key')
-        user = get_by_key(user_key)
+        user = self.current_user()
         if not user:
             email = self.request.cookies.get('email')
             user_pass = self.request.cookies.get('user_pass')
@@ -118,7 +118,7 @@ class AccessHandler(HelpHandler):
         taskqueue.add(url='/access', params={'user_key':user.key()})
         self.redirect('/bookmarks')
 
-    #Posts send to '/access' are tasks for fetching user's bookmark
+    # Posts send to '/access' are tasks for fetching user's bookmark
     def post(self):
         user_key = str(self.request.get('user_key'))
         user = get_by_key(user_key)
@@ -132,8 +132,8 @@ class AccessHandler(HelpHandler):
 
 class UsersHandler(HelpHandler):
     def get(self):
-        users_names = users.User.all().fetch(None)
-        self.render('users.html', users=users_names)
+        user_list = users.User.all().fetch(None)
+        self.render('users.html', current_user=self.current_user(), user_list=user_list)
 
     def post(self):
         email = self.request.get('email')
@@ -144,15 +144,17 @@ class UsersHandler(HelpHandler):
 class UserPageHandler(HelpHandler):
     def get(self, user_key):
         #Check if user_key points to a user in the db; if not, redirect him to home page.
-        user = get_by_key(user_key)
-        if user:
-            self.render('user.html', user=user, bookmarks=Bookmark.user_favorites(user))
+        #We have to differentiate the online user from the user of the page for the navbar "my bookmarks" link.
+        page_user = get_by_key(user_key)
+        if page_user:
+            self.render('user.html', current_user=self.current_user(), page_user=page_user,
+                    bookmarks=Bookmark.user_favorites(page_user))
         else:
             self.redirect('/')
 
 class BookmarkHandler(HelpHandler):
     def get(self):
-        self.render('bookmarks.html', bookmarks=Bookmark.favorites())
+        self.render('bookmarks.html', user=self.current_user(), bookmarks=Bookmark.favorites())
 
 class DumpHandler(HelpHandler):
     def get(self):

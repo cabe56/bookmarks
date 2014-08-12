@@ -1,8 +1,17 @@
-<h4>{{user.email}}'s bookmarks:</h4>
-{% for bookmark in bookmarks %}
+{% extends "base.html" %}
 
-	<a href="{{bookmark.url}}"><h4>{{bookmark.title}}</h4></a>
-	{% if bookmark.is_favorite %}
-		Favorited
-	{% endif %}
-{% endfor %}
+{% block content %}
+<div id='user-profile'>
+  <h4>{{page_user.email}}'s bookmarks:</h4>
+  <ul id='user-bookmarks'>
+    {% for bookmark in bookmarks %}
+      <li class='user-bookmark'>
+        <a class='bookmark-link' href={{bookmark.url}}>
+          <span>{{bookmark.title|d(bookmark.url, true)}}</span>
+          {% if bookmark.is_favorite %}<span>(Favorite)</span>{% endif %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

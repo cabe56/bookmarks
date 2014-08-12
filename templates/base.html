@@ -1,0 +1,11 @@
+<body>
+	<div id='navbar' style="position: absolute;right: 0px">
+		<a href = '/bookmarks'>Bookmarks</a> 
+		<a href = '/users'>Users</a>
+		{% if current_user %}
+			<a href = '/users/{{current_user.key()}}'>My Bookmarks</a>
+		{% endif %}
+	</div>
+	{% block content %}
+	{% endblock %}
+</body>
