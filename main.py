@@ -54,6 +54,7 @@ class Bookmark(db.Model):
     def favorites():
         return db.GqlQuery("SELECT * FROM Bookmark WHERE is_favorite=True").fetch(None)
 
+    @staticmethod
     def user_favorites(user):
         return db.GqlQuery("SELECT * FROM Bookmark WHERE user=:u ORDER BY is_favorite DESC", u=user).fetch(None)
 
