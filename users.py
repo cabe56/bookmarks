@@ -60,7 +60,7 @@ def login_signup_logic(self, email, password):
     if not valid_pass:
         error = 'Please enter a valid password.'
     if not valid_e:
-        error = 'Please enter a valid email address.'    
+        error = 'Please enter a valid email address.'
     return error
 
 class User(db.Model):
@@ -73,8 +73,8 @@ class User(db.Model):
     def fetch_bookmarks(self, offset=0, count=1):
         """Fetch items and store in db. Return total number of inserted bookmarks.
 
-        In order to do the pagination a recursion on the offset will 
-        insert "count" items at a time on the database. 
+        In order to do the pagination a recursion on the offset will
+        insert "count" items at a time on the database.
         """
         response_items = pocket_connect.get_pocket_items(self.pocket_access_token, state='all', detailType='complete', count=count, offset=offset, since=self.last_access_to_pocket)
         # Stop recursion if the items extracted is less than count.
@@ -83,7 +83,7 @@ class User(db.Model):
             self.last_access_to_pocket = int(time.time())
             return offset + len(response_items)
         self.save_bookmarks(response_items)
-        #show_progress_to_user()    
+        #show_progress_to_user()
         return self.fetch_bookmarks(offset+count)
     def save_bookmarks(self, bookmarks):
         for bookmark in bookmarks:
@@ -107,9 +107,4 @@ class User(db.Model):
                 new_bookmark.is_favorite = bookmark['favorite'] == '1'
                 #new_bookmark.tags = str(bookmark['tags'].keys())
             new_bookmark.put()
-        return 
-
-    def sort_bookmarks(bookmarks):
-    #Sorts bookmarks by favorites first. If reverse=False (default), favorites would be last.
-    bookmarks_sorted = sorted(bookmarks, key=lambda bookmark: bookmark.is_favorite, reverse=True)
-    return bookmarks_sorted
+        return

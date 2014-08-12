@@ -50,6 +50,13 @@ class Bookmark(db.Model):
     tags = db.TextProperty()
     word_count = db.IntegerProperty()
 
+    @staticmethod
+    def favorites():
+        return db.GqlQuery("SELECT * FROM Bookmark WHERE is_favorite=True").fetch(None)
+
+    def user_favorites(user):
+        return db.GqlQuery("SELECT * FROM Bookmark WHERE user=:u ORDER BY is_favorite DESC", u=user).fetch(None)
+
 class HelpHandler(webapp2.RequestHandler):
     def write (self, *a, **kw):
         self.response.write(*a, **kw)
@@ -66,9 +73,9 @@ class MainHandler(HelpHandler):
         user_key = self.request.cookies.get('user_key')
         user = get_by_key(user_key)
         if user:
-            self.redirect('/bookmarks') 
+            self.redirect('/bookmarks')
         else:
-            self.render('home.html')        
+            self.render('home.html')
 
 class AccessHandler(HelpHandler):
     def get(self):
@@ -94,7 +101,7 @@ class AccessHandler(HelpHandler):
         user = get_by_key(user_key)
         total_items_extracted = user.fetch_bookmarks()
         #If user had already extracted items from pocket, we add the amount of new ones.
-        if user.total_pocket_items != None:     
+        if user.total_pocket_items != None:
             user.total_pocket_items += total_items_extracted
         else:
             user.total_pocket_items = total_items_extracted
@@ -115,16 +122,14 @@ class UserPageHandler(HelpHandler):
     def get(self, user_key):
         #Check if user_key points to a user in the db; if not, redirect him to home page.
         user = get_by_key(user_key)
-        if not user:
+        if user:
+            self.render('user.html', user=user, bookmarks=Bookmark.user_favorites(user))
+        else:
             self.redirect('/')
-            return
-        user_bookmarks = user.sort_bookmarks(user.bookmark_set.fetch(None))
-        self.render('user.html', user=user, bookmarks=user_bookmarks)
 
 class BookmarkHandler(HelpHandler):
     def get(self):
-        bookmarks = db.GqlQuery(" SELECT * FROM Bookmark WHERE is_favorite=True ").fetch(None)
-        self.render('bookmarks.html', bookmarks=bookmarks)
+        self.render('bookmarks.html', bookmarks=Bookmark.favorites())
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
