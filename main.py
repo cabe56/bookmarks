@@ -20,6 +20,7 @@ import analyzer
 import users
 import jinja2
 import os
+import json
 import time
 import users
 from google.appengine.ext import db
@@ -37,7 +38,7 @@ def get_by_key(key):
 
 def get_bookmark(key):
     bookmark_key = db.Key.from_path('Bookmark', str(key))
-    bookmark =Bookmark.get(bookmark_key)
+    bookmark = Bookmark.get(bookmark_key)
     return bookmark
 
 class Bookmark(db.Model):
@@ -58,11 +59,32 @@ class Bookmark(db.Model):
     def user_favorites(user):
         return db.GqlQuery("SELECT * FROM Bookmark WHERE user=:u ORDER BY is_favorite DESC", u=user).fetch(None)
 
+    @staticmethod
+    def save_pocket_item(item, user):
+        attrs = {
+            'user': user,
+            'title': item['resolved_title'],
+            'has_been_read': item['status'] == '1',
+            'is_favorite': item['favorite'] == '1',
+            'url': item['resolved_url'],
+            #'tags': str(item['tags'].keys()),
+            'excerpt': item['excerpt'],
+            'word_count': int(item['word_count'])
+        }
+        new_b = Bookmark(**attrs)
+        new_b.put()
+        return new_b
+
+    @staticmethod
+    def save_from_dump(user):
+        items = pocket_connect.get_pocket_items_from_json()
+        return map(lambda i: Bookmark.save_pocket_item(i, user), items)
+
 class HelpHandler(webapp2.RequestHandler):
     def write (self, *a, **kw):
         self.response.write(*a, **kw)
 
-    def render_str(self,template, **params):
+    def render_str(self, template, **params):
         t = jinja_env.get_template(template)
         return t.render(params)
 
@@ -74,7 +96,7 @@ class MainHandler(HelpHandler):
         user_key = self.request.cookies.get('user_key')
         user = get_by_key(user_key)
         if user:
-            self.redirect('/bookmarks')
+            self.redirect('bookmarks')
         else:
             self.render('home.html')
 
@@ -132,8 +154,24 @@ class BookmarkHandler(HelpHandler):
     def get(self):
         self.render('bookmarks.html', bookmarks=Bookmark.favorites())
 
+class DumpHandler(HelpHandler):
+    def get(self):
+        user_key = self.request.cookies.get('user_key')
+        user = get_by_key(user_key)
+        if user and os.path.isfile('pocket_bookmarks.json.dump'):
+            # If bookmark dump found, load into db
+            Bookmark.save_from_dump(user)
+        elif user:
+            items = pocket_connect.get_pocket_items(
+                    user.pocket_access_token, state='all',
+                    detailType='complete')
+            self.write(json.dumps(items))
+        else:
+            self.redirect('/')
+
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
+    ('/bookmarks/dump', DumpHandler),
     ('/access', AccessHandler),
     ('/users', UsersHandler),
     ('/users/(.*)', UserPageHandler),

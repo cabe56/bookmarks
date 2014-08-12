@@ -70,6 +70,10 @@ class User(db.Model):
     total_pocket_items = db.IntegerProperty()
     last_access_to_pocket = db.IntegerProperty()
 
+    def record_pocket_access(self):
+        """Save timestamp to indicate access to pocket."""
+        self.last_access_to_pocket = int(time.time())
+
     def fetch_bookmarks(self, offset=0, count=1):
         """Fetch items and store in db. Return total number of inserted bookmarks.
 
@@ -80,31 +84,9 @@ class User(db.Model):
         # Stop recursion if the items extracted is less than count.
         if len(response_items) < count or response_items == []:
             #return total number of items extracted and update last_access_to_pocket
-            self.last_access_to_pocket = int(time.time())
+            self.record_pocket_access()
             return offset + len(response_items)
-        self.save_bookmarks(response_items)
+        for item in response_items:
+            main.Bookmark.save_pocket_item(item, self)
         #show_progress_to_user()
         return self.fetch_bookmarks(offset+count)
-    def save_bookmarks(self, bookmarks):
-        for bookmark in bookmarks:
-            key_name = str(self.email)+str(bookmark['resolved_url'])
-            attrs = {
-                    'key_name': key_name,
-                    'user': self,
-                    'title': bookmark['resolved_title'],
-                    'has_been_read': bookmark['status'] == '1',
-                    'is_favorite': bookmark['favorite'] == '1',
-                    'url': bookmark['resolved_url'],
-                    #'tags': str(bookmark['tags'].keys()),
-                    'excerpt': bookmark['excerpt'],
-                    'word_count': int(bookmark['word_count'])
-            }
-            new_bookmark = main.get_bookmark(key_name)
-            if new_bookmark == None:
-                new_bookmark = main.Bookmark(**attrs)
-            else:
-                new_bookmark.has_been_read = bookmark['status'] == '1'
-                new_bookmark.is_favorite = bookmark['favorite'] == '1'
-                #new_bookmark.tags = str(bookmark['tags'].keys())
-            new_bookmark.put()
-        return
