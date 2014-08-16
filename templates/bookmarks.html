@@ -1,5 +1,13 @@
-{% for bookmark in bookmarks %}
+{% extends "base.html" %}
 
-	<a href="{{bookmark.url}}"><h4>{{bookmark.title}}</h4></a>
+{% block content %}
 
-{% endfor %}
+<ul id='bookmark-list'>
+  {% for bookmark in bookmarks %}
+    <li class='bookmark-link'>
+      <a href="{{bookmark.url}}"><h4>{{bookmark.title}}</h4></a>
+    </li>
+  {% endfor %}
+</ul>
+
+{% endblock %}

@@ -1,5 +1,13 @@
-{% for user in users %}
+{% extends "base.html" %}
 
-	<a href='/users/{{user.key()}}'><h4>{{user.email}}</h4></a>
-
+{% block content %}
+<ul id='user-list'>
+{% for user in user_list %}
+  <li>
+    <a href='/users/{{user.key()}}'>
+      <h4>{{user.email}}</h4>
+    </a>
+  </li>
 {% endfor %}
+</ul>
+{% endblock %}
