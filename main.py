@@ -65,7 +65,9 @@ class Bookmark(db.Model):
 
     @staticmethod
     def save_pocket_item(item, user):
+        key_name = str(user.email)+str(item['resolved_url'])
         attrs = {
+            'key_name': key_name,
             'user': user,
             'title': item['resolved_title'],
             'has_been_read': item['status'] == '1',
@@ -75,9 +77,15 @@ class Bookmark(db.Model):
             'excerpt': item['excerpt'],
             'word_count': int(item['word_count'])
         }
-        new_b = Bookmark(**attrs)
-        new_b.put()
-        return new_b
+        new_bookmark = get_bookmark(key_name)
+        if new_bookmark == None:
+            new_bookmark = Bookmark(**attrs)
+        else:
+            new_bookmark.has_been_read = item['status'] == '1'
+            new_bookmark.is_favorite = item['favorite'] == '1'
+            #new_bookmark.tags = str(item['tags'].keys())
+        new_bookmark.put()
+        return new_bookmark
 
     @staticmethod
     def save_from_dump(user):
