@@ -3,10 +3,9 @@
 {% block content %}
 <ul id='user-list'>
 {% for user in user_list %}
-  <li>
-    <a href='/users/{{user.key()}}'>
-      <h4>{{user.email}}</h4>
-    </a>
+  <li class='user'>
+    <a href='/users/{{user.key()}}'>{{user.email}}</a>
+    <span>({{user.bookmark_list_desc}})</span>
   </li>
 {% endfor %}
 </ul>

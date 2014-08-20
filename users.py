@@ -70,6 +70,20 @@ class User(db.Model):
     total_pocket_items = db.IntegerProperty()
     last_access_to_pocket = db.IntegerProperty()
 
+    @property
+    def fav_count(self):
+        # Return number of favorited bookmarks
+        return main.Bookmark.favorites_count(self)
+
+    @property
+    def bookmark_count(self):
+        # Return number of total bookmarks
+        return self.bookmark_set.count()
+
+    @property
+    def bookmark_list_desc(self):
+        return "%i favs out of %i" % (self.fav_count, self.bookmark_count)
+
     def record_pocket_access(self):
         """Save timestamp to indicate access to pocket."""
         self.last_access_to_pocket = int(time.time())

@@ -60,6 +60,10 @@ class Bookmark(db.Model):
         return db.GqlQuery("SELECT * FROM Bookmark WHERE user=:u ORDER BY is_favorite DESC", u=user).fetch(None)
 
     @staticmethod
+    def favorites_count(user):
+        return db.GqlQuery("SELECT * FROM Bookmark WHERE is_favorite=True AND user=:u", u=user).count()
+
+    @staticmethod
     def save_pocket_item(item, user):
         attrs = {
             'user': user,
